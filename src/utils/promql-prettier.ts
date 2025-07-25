@@ -1,7 +1,30 @@
 /**
  * PromQL 格式化工具
  * 基于简单的语法解析实现PromQL和MetricsQL的格式化
+ * 支持WASM模式使用VictoriaMetrics/metricsql进行高精度格式化
  */
+
+import WasmFormatter from './wasm-formatter';
+import type { WasmFormatResult, WasmValidateResult } from './wasm-formatter';
+
+// WASM格式化器实例
+let wasmFormatter: WasmFormatter | null = null;
+
+/**
+ * 格式化模式
+ */
+export enum FormatMode {
+  JAVASCRIPT = 'javascript', // 使用JavaScript实现的格式化
+  WASM = 'wasm'              // 使用WASM模式的格式化
+}
+
+/**
+ * 格式化选项
+ */
+export interface FormatOptions {
+  mode?: FormatMode;
+  fallbackToJS?: boolean; // WASM失败时是否回退到JavaScript模式
+}
 
 // PromQL操作符和关键字
 const OPERATORS = [
@@ -36,21 +59,49 @@ const AGGREGATION_OPERATORS = [
 /**
  * 格式化PromQL查询语句
  * @param query - 原始PromQL查询字符串
+ * @param options - 格式化选项
  * @returns 格式化后的查询字符串和可能的错误信息
  */
-export function formatPromQL(query: string): { formatted: string; error: string | null } {
+export async function formatPromQL(
+  query: string, 
+  options: FormatOptions = { mode: FormatMode.WASM, fallbackToJS: true }
+): Promise<{ formatted: string; error: string | null }> {
   try {
     if (!query || !query.trim()) {
       return { formatted: '', error: null };
     }
 
-    // 移除多余的空白字符
+    // 优先使用WASM模式
+    if (options.mode === FormatMode.WASM || options.mode === undefined) {
+      try {
+        // 初始化WASM格式化器
+         if (!wasmFormatter) {
+           wasmFormatter = new WasmFormatter();
+           await wasmFormatter.waitForInit();
+         }
+        
+        // 使用WASM格式化
+        const wasmResult = await wasmFormatter.formatPromQL(query);
+        if (wasmResult.success && wasmResult.formatted) {
+          return { formatted: wasmResult.formatted, error: null };
+        } else if (!options.fallbackToJS) {
+          return { formatted: '', error: wasmResult.error || 'WASM格式化失败' };
+        }
+        // 如果WASM失败且允许回退，继续使用JavaScript模式
+      } catch (wasmError) {
+        if (!options.fallbackToJS) {
+          return {
+            formatted: '',
+            error: wasmError instanceof Error ? wasmError.message : 'WASM格式化时发生错误'
+          };
+        }
+        // 如果WASM失败且允许回退，继续使用JavaScript模式
+      }
+    }
+
+    // JavaScript模式格式化
     const cleanQuery = query.trim().replace(/\s+/g, ' ');
-    
-    // 使用改进的格式化逻辑
     let formatted = formatPromQLAdvanced(cleanQuery);
-    
-    // 清理格式化结果
     formatted = cleanupFormatting(formatted);
     
     return { formatted: formatted.trim(), error: null };
@@ -253,14 +304,44 @@ function escapeRegex(string: string): string {
 }
 
 /**
- * 验证PromQL语法（简单验证）
+ * 验证PromQL语法
+ * @param query - PromQL查询字符串
+ * @param options - 验证选项
+ * @returns 验证结果
  */
-export function validatePromQL(query: string): { isValid: boolean; error: string | null } {
+export async function validatePromQL(
+  query: string,
+  options: FormatOptions = { mode: FormatMode.WASM, fallbackToJS: true }
+): Promise<{ isValid: boolean; error: string | null }> {
   try {
     if (!query || !query.trim()) {
       return { isValid: true, error: null };
     }
 
+    // 优先使用WASM模式
+    if (options.mode === FormatMode.WASM || options.mode === undefined) {
+      try {
+        // 初始化WASM格式化器
+        if (!wasmFormatter) {
+          wasmFormatter = new WasmFormatter();
+          await wasmFormatter.waitForInit();
+        }
+        
+        // 使用WASM验证
+        const wasmResult = await wasmFormatter.validatePromQL(query);
+        return { isValid: wasmResult.valid, error: wasmResult.error || null };
+      } catch (wasmError) {
+        if (!options.fallbackToJS) {
+          return {
+            isValid: false,
+            error: wasmError instanceof Error ? wasmError.message : 'WASM验证时发生错误'
+          };
+        }
+        // 如果WASM失败且允许回退，继续使用JavaScript模式
+      }
+    }
+
+    // JavaScript模式验证
     // 检查括号是否匹配
     const brackets = query.match(/[()]/g) || [];
     let openCount = 0;
@@ -297,8 +378,36 @@ export function validatePromQL(query: string): { isValid: boolean; error: string
 
 /**
  * 获取示例PromQL查询
+ * @param options - 获取选项
+ * @returns 示例查询列表
  */
-export function getExampleQueries(): string[] {
+export async function getExampleQueries(
+  options: FormatOptions = { mode: FormatMode.WASM, fallbackToJS: true }
+): Promise<string[]> {
+  // 优先使用WASM模式
+  if (options.mode === FormatMode.WASM || options.mode === undefined) {
+    try {
+      // 初始化WASM格式化器
+      if (!wasmFormatter) {
+        wasmFormatter = new WasmFormatter();
+        await wasmFormatter.waitForInit();
+      }
+      
+      // 使用WASM获取示例
+      const wasmExamples = await wasmFormatter.getExampleQueries();
+      if (wasmExamples.length > 0) {
+        return wasmExamples;
+      }
+    } catch (wasmError) {
+      if (!options.fallbackToJS) {
+        console.error('WASM获取示例失败:', wasmError);
+        return [];
+      }
+      // 如果WASM失败且允许回退，继续使用JavaScript模式
+    }
+  }
+
+  // JavaScript模式的默认示例
   return [
     'up',
     'rate(http_requests_total[5m])',
@@ -307,5 +416,5 @@ export function getExampleQueries(): string[] {
     'count(sum(label_replace(node_uname_info, "kernel", "$1", "release", "([0-9]+.[0-9]+.[0-9]+).*")) by (kernel)) > 1',
     'avg_over_time(cpu_usage_percent[1h]) > 80',
     'sum by (instance) (rate(node_cpu_seconds_total{mode!="idle"}[5m])) * 100'
-  ];
+   ];
 }

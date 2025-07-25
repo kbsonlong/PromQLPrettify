@@ -13,7 +13,7 @@
     <div class="output-container">
       <!-- 正常输出 -->
       <div v-if="!hasError && formattedContent" class="success-output">
-        <pre class="code-pre">{{ formattedContent }}</pre>
+        <pre class="code-pre" v-html="highlightedContent"></pre>
       </div>
       
       <!-- 错误输出 -->
@@ -65,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, withDefaults, defineProps } from 'vue'
 import CopyButton from './CopyButton.vue'
 
 // 组件属性
@@ -99,6 +99,101 @@ const lineCount = computed(() => {
 const charCount = computed(() => {
   return formattedContent.value ? formattedContent.value.length : 0
 })
+
+// 语法高亮
+const highlightedContent = computed(() => {
+  if (!formattedContent.value) return ''
+  return highlightPromQL(formattedContent.value)
+})
+
+/**
+ * PromQL语法高亮函数
+ */
+function highlightPromQL(code: string): string {
+  let highlighted = code
+  
+  // 转义HTML特殊字符
+  highlighted = highlighted
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+  
+  // 高亮字符串（双引号和单引号）
+  highlighted = highlighted.replace(
+    /(["'])((?:\\.|(?!\1)[^\\])*)\1/g,
+    '<span class="string">$&</span>'
+  )
+  
+  // 高亮数字
+  highlighted = highlighted.replace(
+    /\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?[smhdwy]?\b/g,
+    '<span class="number">$&</span>'
+  )
+  
+  // 高亮函数名
+  const functions = [
+    'abs', 'absent', 'absent_over_time', 'avg', 'avg_over_time',
+    'ceil', 'changes', 'clamp_max', 'clamp_min', 'count', 'count_over_time',
+    'delta', 'deriv', 'exp', 'floor', 'histogram_quantile',
+    'holt_winters', 'idelta', 'increase', 'irate', 'label_join',
+    'label_replace', 'ln', 'log10', 'log2', 'max', 'max_over_time',
+    'min', 'min_over_time', 'predict_linear', 'quantile', 'quantile_over_time',
+    'rate', 'resets', 'round', 'scalar', 'sort', 'sort_desc',
+    'sqrt', 'stddev', 'stddev_over_time', 'sum', 'sum_over_time',
+    'time', 'timestamp', 'vector', 'year', 'month', 'day_of_month',
+    'day_of_week', 'hour', 'minute', 'days_in_month', 'bottomk', 'topk'
+  ]
+  
+  functions.forEach(func => {
+    const regex = new RegExp(`\\b(${func})\\s*\\(`, 'g')
+    highlighted = highlighted.replace(regex, '<span class="function">$1</span>(')
+  })
+  
+  // 高亮操作符
+  highlighted = highlighted.replace(
+    /\b(and|or|unless|group_left|group_right)\b/g,
+    '<span class="operator">$1</span>'
+  )
+  
+  // 高亮比较操作符
+  highlighted = highlighted.replace(
+    /(==|!=|>=|<=|>|<)/g,
+    '<span class="operator">$1</span>'
+  )
+  
+  // 高亮算术操作符
+  highlighted = highlighted.replace(
+    /([+\-*/%^])/g,
+    '<span class="operator">$1</span>'
+  )
+  
+  // 高亮聚合操作符
+  const aggregators = ['sum', 'min', 'max', 'avg', 'group', 'stddev', 'stdvar', 'count', 'count_values']
+  aggregators.forEach(agg => {
+    const regex = new RegExp(`\\b(${agg})\\s*\\(`, 'g')
+    highlighted = highlighted.replace(regex, '<span class="function">$1</span>(')
+  })
+  
+  // 高亮关键字
+  highlighted = highlighted.replace(
+    /\b(by|without|on|ignoring|offset)\b/g,
+    '<span class="keyword">$1</span>'
+  )
+  
+  // 高亮标签名（在{}内的键）
+  highlighted = highlighted.replace(
+    /{([^}]*)}/g,
+    (match, content) => {
+      const highlightedLabels = content.replace(
+        /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*([=!~]+)/g,
+        '<span class="label">$1</span>$2'
+      )
+      return `{${highlightedLabels}}`
+    }
+  )
+  
+  return highlighted
+}
 </script>
 
 <style scoped>
@@ -162,19 +257,38 @@ const charCount = computed(() => {
 }
 
 /* 语法高亮样式 */
-.code-pre {
-  /* PromQL关键字 */
-  --keyword-color: #569cd6;
-  /* 函数名 */
-  --function-color: #dcdcaa;
-  /* 字符串 */
-  --string-color: #ce9178;
-  /* 数字 */
-  --number-color: #b5cea8;
-  /* 操作符 */
-  --operator-color: #d4d4d4;
-  /* 注释 */
-  --comment-color: #6a9955;
+.code-pre :deep(.string) {
+  color: #ffd700;
+  background-color: rgba(255, 215, 0, 0.1);
+  padding: 1px 2px;
+  border-radius: 2px;
+}
+
+.code-pre :deep(.function) {
+  color: #98fb98;
+  font-weight: 500;
+}
+
+.code-pre :deep(.operator) {
+  color: #ffa500;
+  font-weight: bold;
+}
+
+.code-pre :deep(.number) {
+  color: #ff6b6b;
+}
+
+.code-pre :deep(.keyword) {
+  color: #87cefa;
+  font-weight: 500;
+}
+
+.code-pre :deep(.label) {
+  color: #dda0dd;
+}
+
+.code-pre :deep(.metric) {
+  color: #87ceeb;
 }
 
 /* 错误容器 */

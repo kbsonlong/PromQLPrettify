@@ -12,6 +12,7 @@
 - 🌙 **深色主题**: 提供舒适的代码阅读体验
 - ⚡ **零依赖**: 纯前端实现，无需后端服务
 - 🚀 **智能格式化**: 参考[promql-metricsql-prettify](https://github.com/laixintao/promql-metricsql-prettify)的格式化风格，减少不必要的换行，提供更美观的输出
+- 🔧 **WASM模式**: 集成VictoriaMetrics/metricsql的Go WASM模块，提供更精确的格式化和验证
 
 ## 技术栈
 
@@ -19,6 +20,7 @@
 - **构建工具**: Vite
 - **语言**: TypeScript
 - **样式**: CSS3 + Flexbox
+- **WASM模块**: Go + VictoriaMetrics/metricsql
 - **部署**: GitHub Pages
 
 ## 项目结构
@@ -26,18 +28,25 @@
 ```
 promql-prettify/
 ├── public/
-│   └── index.html
+│   ├── index.html
+│   ├── promql-formatter.wasm     # Go WASM模块
+│   └── wasm_exec.js             # Go WASM执行支持文件
 ├── src/
 │   ├── components/
 │   │   ├── PromqlEditor.vue      # PromQL输入编辑器
 │   │   ├── PrettierOutput.vue    # 格式化结果显示
 │   │   └── CopyButton.vue        # 复制按钮组件
 │   ├── utils/
-│   │   └── promql-prettier.ts    # PromQL格式化核心逻辑
+│   │   ├── promql-prettier.ts    # PromQL格式化核心逻辑
+│   │   └── wasm-formatter.ts     # WASM格式化器
 │   ├── styles/
 │   │   └── main.css             # 全局样式
 │   ├── App.vue                  # 主应用组件
 │   └── main.ts                  # 应用入口
+├── wasm/
+│   ├── go.mod                   # Go模块定义
+│   ├── go.sum                   # Go依赖锁定
+│   └── main.go                  # Go WASM源码
 ├── package.json
 ├── vite.config.ts
 ├── tsconfig.json
@@ -50,6 +59,20 @@ promql-prettify/
 2. **实时格式化**: 右侧会实时显示格式化后的结果
 3. **复制结果**: 点击"复制"按钮将格式化后的查询复制到剪贴板
 4. **错误提示**: 如果查询语法有误，会显示相应的错误信息
+5. **WASM模式**: 自动优先使用WASM模式进行格式化，提供更精确的结果
+
+## 格式化模式
+
+### WASM模式 (推荐)
+- 使用VictoriaMetrics/metricsql的Go实现
+- 提供最精确的PromQL/MetricsQL解析和格式化
+- 支持完整的语法验证
+- 自动回退到JavaScript模式（如果WASM加载失败）
+
+### JavaScript模式 (备用)
+- 纯JavaScript实现的格式化逻辑
+- 轻量级，兼容性好
+- 基本的语法验证和格式化功能
 
 ## 示例
 

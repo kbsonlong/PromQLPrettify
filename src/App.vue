@@ -48,7 +48,7 @@
 import { ref, watch } from 'vue'
 import PromqlEditor from './components/PromqlEditor.vue'
 import PrettierOutput from './components/PrettierOutput.vue'
-import { formatPromQL, validatePromQL } from './utils/promql-prettier'
+import { formatPromQL, validatePromQL, FormatMode } from './utils/promql-prettier'
 
 // 应用状态
 const rawInput = ref('')
@@ -62,7 +62,7 @@ const handleInputChange = (input: string) => {
 }
 
 // 格式化PromQL
-const formatQuery = (query: string) => {
+const formatQuery = async (query: string) => {
   const startTime = performance.now()
   
   try {
@@ -74,8 +74,8 @@ const formatQuery = (query: string) => {
       return
     }
     
-    // 首先验证语法
-    const validation = validatePromQL(query)
+    // 首先验证语法（优先使用WASM）
+    const validation = await validatePromQL(query, { mode: FormatMode.WASM, fallbackToJS: true })
     if (!validation.isValid) {
       prettierOutput.value = ''
       formatError.value = validation.error
@@ -83,8 +83,8 @@ const formatQuery = (query: string) => {
       return
     }
     
-    // 执行格式化
-    const result = formatPromQL(query)
+    // 执行格式化（优先使用WASM）
+    const result = await formatPromQL(query, { mode: FormatMode.WASM, fallbackToJS: true })
     
     if (result.error) {
       prettierOutput.value = ''
@@ -104,8 +104,8 @@ const formatQuery = (query: string) => {
 }
 
 // 监听输入变化，实时格式化
-watch(rawInput, (newInput) => {
-  formatQuery(newInput)
+watch(rawInput, async (newInput: string) => {
+  await formatQuery(newInput)
 }, { immediate: true })
 
 // 页面加载时的初始化

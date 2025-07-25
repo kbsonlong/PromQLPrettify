@@ -37,8 +37,39 @@ jobs:
           node-version: '18'
           cache: 'npm'
           
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          
       - name: Install dependencies
         run: npm ci
+        
+      - name: Build WASM module
+        run: |
+          cd wasm
+          go mod download
+          GOOS=js GOARCH=wasm go build -o ../public/promql-formatter.wasm main.go
+          
+          # 查找并复制wasm_exec.js (GitHub Actions环境)
+          WASM_EXEC_JS="$(go env GOROOT)/misc/wasm/wasm_exec.js"
+          if [ -f "$WASM_EXEC_JS" ]; then
+            rm -f ../public/wasm_exec.js
+            cp "$WASM_EXEC_JS" ../public/
+            echo "✅ 已复制wasm_exec.js从: $WASM_EXEC_JS"
+          else
+            echo "❌ 未找到wasm_exec.js文件在: $WASM_EXEC_JS"
+            echo "尝试查找其他位置..."
+            rm -f ../public/wasm_exec.js
+            find /opt/hostedtoolcache -name "wasm_exec.js" 2>/dev/null | head -1 | xargs -I {} cp {} ../public/
+          fi
+        
+      - name: Verify WASM files
+        run: |
+          echo "Checking WASM files..."
+          ls -la public/promql-formatter.wasm
+          ls -la public/wasm_exec.js
+          echo "WASM files verified successfully!"
         
       - name: Build
         run: npm run build

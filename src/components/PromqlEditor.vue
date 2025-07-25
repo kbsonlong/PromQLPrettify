@@ -62,8 +62,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
-import { getExampleQueries } from '../utils/promql-prettier'
+import { ref, computed, nextTick, onMounted } from 'vue'
+import { getExampleQueries, FormatMode } from '../utils/promql-prettier'
 
 // 组件属性
 interface Props {
@@ -81,7 +81,7 @@ const emit = defineEmits<Emits>()
 // 组件状态
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const showExamples = ref(false)
-const examples = ref(getExampleQueries())
+const examples = ref<string[]>([])
 
 // 计算属性
 const charCount = computed(() => {
@@ -156,6 +156,22 @@ const focus = () => {
     textareaRef.value?.focus()
   })
 }
+
+// 初始化示例查询
+onMounted(async () => {
+  try {
+    // 优先使用WASM模式获取示例
+    examples.value = await getExampleQueries({ mode: FormatMode.WASM, fallbackToJS: true })
+  } catch (error) {
+    console.error('获取示例查询失败:', error)
+    // 如果失败，使用默认示例
+    examples.value = [
+      'up',
+      'rate(http_requests_total[5m])',
+      'sum(rate(http_requests_total[5m])) by (job)'
+    ]
+  }
+})
 
 // 暴露方法给父组件
 defineExpose({

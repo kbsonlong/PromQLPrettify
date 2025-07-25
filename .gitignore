@@ -150,3 +150,5 @@ build/
 *.tmp
 *.temp
 .vercel/
+public/promql-formatter.wasm
+public/wasm_exec.js
