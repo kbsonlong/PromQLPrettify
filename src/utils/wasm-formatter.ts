@@ -10,11 +10,20 @@ interface WasmValidateResult {
   error?: string;
 }
 
+interface WasmExplainResult {
+  success: boolean;
+  ast?: any;
+  execution?: any[];
+  performance?: any;
+  error?: string;
+}
+
 // 全局WASM函数声明
 declare global {
   interface Window {
     formatPromQLWasm?: (query: string) => WasmFormatResult;
     validatePromQLWasm?: (query: string) => WasmValidateResult;
+    explainPromQLWasm?: (query: string) => WasmExplainResult;
     getExampleQueriesWasm?: () => string[];
     wasmReady?: () => void;
     Go?: any;
@@ -101,7 +110,8 @@ class WasmFormatter {
   isAvailable(): boolean {
     return this.isReady && 
            typeof window.formatPromQLWasm === 'function' &&
-           typeof window.validatePromQLWasm === 'function';
+           typeof window.validatePromQLWasm === 'function' &&
+           typeof window.explainPromQLWasm === 'function';
   }
 
   /**
@@ -150,6 +160,28 @@ class WasmFormatter {
   }
 
   /**
+   * 使用WASM解释PromQL查询
+   */
+  async explainPromQL(query: string): Promise<WasmExplainResult> {
+    await this.waitForInit();
+    
+    if (!this.isAvailable()) {
+      throw new Error('WASM formatter is not available');
+    }
+    
+    try {
+      const result = window.explainPromQLWasm!(query);
+      return result;
+    } catch (error) {
+      console.error('WASM explain error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
    * 获取示例查询
    */
   async getExampleQueries(): Promise<string[]> {
@@ -170,4 +202,4 @@ class WasmFormatter {
 }
 
 export default WasmFormatter;
-export type { WasmFormatResult, WasmValidateResult };
+export type { WasmFormatResult, WasmValidateResult, WasmExplainResult };

@@ -11,24 +11,63 @@
       <ThemeSelector />
     </div>
     
+    <!-- 功能标签页 -->
+    <div class="tabs-container">
+      <div class="tabs">
+        <button 
+          class="tab-button"
+          :class="{ active: activeTab === 'format' }"
+          @click="activeTab = 'format'"
+        >
+          🎨 格式化
+        </button>
+        <button 
+          class="tab-button"
+          :class="{ active: activeTab === 'explain' }"
+          @click="activeTab = 'explain'"
+        >
+          🔍 查询解释
+        </button>
+      </div>
+    </div>
+    
     <!-- 主要内容区域 -->
     <main class="interactive-area">
-      <!-- 输入区域 -->
-      <div class="interactive-block">
-        <PromqlEditor 
-          v-model="rawInput" 
-          @update:modelValue="handleInputChange"
-        />
-      </div>
+      <!-- 格式化模式 -->
+      <template v-if="activeTab === 'format'">
+        <!-- 输入区域 -->
+        <div class="interactive-block">
+          <PromqlEditor 
+            v-model="rawInput" 
+            @update:modelValue="handleInputChange"
+          />
+        </div>
+        
+        <!-- 输出区域 -->
+        <div class="interactive-block">
+          <PrettierOutput 
+            :content="prettierOutput" 
+            :error="formatError"
+            :format-time="formatTime"
+          />
+        </div>
+      </template>
       
-      <!-- 输出区域 -->
-      <div class="interactive-block">
-        <PrettierOutput 
-          :content="prettierOutput" 
-          :error="formatError"
-          :format-time="formatTime"
-        />
-      </div>
+      <!-- 查询解释模式 -->
+      <template v-else-if="activeTab === 'explain'">
+        <!-- 输入区域 -->
+        <div class="interactive-block input-block">
+          <PromqlEditor 
+            v-model="rawInput" 
+            @update:modelValue="handleInputChange"
+          />
+        </div>
+        
+        <!-- 查询解释区域 -->
+        <div class="interactive-block explain-block">
+          <PromQLExplainer :query="rawInput" />
+        </div>
+      </template>
     </main>
     
     <!-- 页脚 -->
@@ -53,6 +92,7 @@ import { ref, watch } from 'vue'
 import PromqlEditor from './components/PromqlEditor.vue'
 import PrettierOutput from './components/PrettierOutput.vue'
 import ThemeSelector from './components/ThemeSelector.vue'
+import PromQLExplainer from './components/PromQLExplainer.vue'
 import { formatPromQL, validatePromQL, FormatMode } from './utils/promql-prettier'
 
 // 应用状态
@@ -60,6 +100,7 @@ const rawInput = ref('')
 const prettierOutput = ref('')
 const formatError = ref<string | null>(null)
 const formatTime = ref<number | undefined>(undefined)
+const activeTab = ref<'format' | 'explain'>('format')
 
 // 处理输入变化
 const handleInputChange = (input: string) => {
@@ -188,12 +229,74 @@ window.addEventListener('unhandledrejection', (event) => {
   margin-bottom: 10px;
 }
 
+.tabs-container {
+  padding: 0 20px;
+  margin-bottom: 20px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  background: #f8f9fa;
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  max-width: 400px;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 12px 20px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6c757d;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tab-button:hover {
+  background: #e9ecef;
+  color: #495057;
+}
+
+.tab-button.active {
+  background: #764abc;
+  color: white;
+  box-shadow: 0 2px 4px rgba(118, 74, 188, 0.3);
+}
+
+.tab-button.active:hover {
+  background: #6a42a8;
+}
+
 .interactive-area {
   display: flex;
   gap: 20px;
   padding: 0 20px;
   flex: 1;
   min-height: 0;
+}
+
+/* 查询解释模式的两栏布局 */
+.interactive-area:has(.explain-block) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.input-block {
+  grid-column: 1;
+}
+
+.explain-block {
+  grid-column: 2;
 }
 
 .interactive-block {
@@ -222,10 +325,31 @@ window.addEventListener('unhandledrejection', (event) => {
 }
 
 /* 响应式设计 */
+@media (max-width: 1200px) {
+  /* 中等屏幕：查询解释模式保持两栏 */
+  .interactive-area:has(.explain-block) {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .input-block {
+    grid-column: 1;
+  }
+  
+  .explain-block {
+    grid-column: 2;
+  }
+}
+
 @media (max-width: 768px) {
   .interactive-area {
     flex-direction: column;
     padding: 0 16px;
+  }
+  
+  /* 小屏幕：查询解释模式改为单栏 */
+  .interactive-area:has(.explain-block) {
+    display: flex;
+    flex-direction: column;
   }
   
   .main-header {
@@ -239,6 +363,15 @@ window.addEventListener('unhandledrejection', (event) => {
   
   .interactive-block {
     min-height: 300px;
+  }
+  
+  .tabs {
+    max-width: none;
+  }
+  
+  .tab-button {
+    padding: 10px 16px;
+    font-size: 13px;
   }
 }
 

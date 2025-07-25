@@ -5,7 +5,7 @@
  */
 
 import WasmFormatter from './wasm-formatter';
-import type { WasmFormatResult, WasmValidateResult } from './wasm-formatter';
+import type { WasmFormatResult, WasmValidateResult, WasmExplainResult } from './wasm-formatter';
 
 // WASM格式化器实例
 let wasmFormatter: WasmFormatter | null = null;
@@ -372,6 +372,84 @@ export async function validatePromQL(
     return {
       isValid: false,
       error: error instanceof Error ? error.message : '语法验证时发生未知错误'
+    };
+  }
+}
+
+/**
+ * 解释PromQL查询
+ * @param query - PromQL查询字符串
+ * @param options - 格式化选项
+ * @returns 查询解释结果
+ */
+export async function explainPromQL(
+  query: string,
+  options: FormatOptions = { mode: FormatMode.WASM, fallbackToJS: true }
+): Promise<WasmExplainResult> {
+  try {
+    if (!query || !query.trim()) {
+      return {
+        success: false,
+        error: '查询不能为空'
+      };
+    }
+
+    // 优先使用WASM模式
+    if (options.mode === FormatMode.WASM || options.mode === undefined) {
+      try {
+        // 初始化WASM格式化器
+        if (!wasmFormatter) {
+          wasmFormatter = new WasmFormatter();
+          await wasmFormatter.waitForInit();
+        }
+        
+        // 使用WASM解释
+        const wasmResult = await wasmFormatter.explainPromQL(query);
+        if (wasmResult.success) {
+          return wasmResult;
+        } else if (!options.fallbackToJS) {
+          return wasmResult;
+        }
+        // 如果WASM失败且允许回退，继续使用JavaScript模式
+      } catch (wasmError) {
+        if (!options.fallbackToJS) {
+          return {
+            success: false,
+            error: wasmError instanceof Error ? wasmError.message : 'WASM解释时发生错误'
+          };
+        }
+        // 如果WASM失败且允许回退，继续使用JavaScript模式
+      }
+    }
+
+    // JavaScript模式的简单解释（回退方案）
+    return {
+      success: true,
+      ast: {
+        type: 'SimpleQuery',
+        value: query,
+        children: []
+      },
+      execution: [
+        {
+          step: 1,
+          operation: '查询解析',
+          description: '解析PromQL查询语法',
+          cost: '低'
+        }
+      ],
+      performance: {
+        complexity: '未知',
+        timeRange: '未指定',
+        cardinality: '未知',
+        bottlenecks: [],
+        suggestions: ['建议使用WASM模式获得更详细的分析']
+      }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '解释查询时发生未知错误'
     };
   }
 }
