@@ -49,6 +49,9 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
+          # 备份构建结果到临时目录
+          cp -r dist /tmp/build-output
+          
           # 创建或切换到docs分支
           git checkout -B docs
           
@@ -56,7 +59,7 @@ jobs:
           find . -maxdepth 1 ! -name '.git' ! -name '.' -exec rm -rf {} +
           
           # 复制构建结果到根目录
-          cp -r dist/* .
+          cp -r /tmp/build-output/* .
           
           # 添加所有文件到git
           git add .
