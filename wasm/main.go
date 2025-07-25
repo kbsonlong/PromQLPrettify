@@ -107,9 +107,7 @@ func main() {
 	js.Global().Set("getExampleQueriesWasm", js.FuncOf(getExampleQueries))
 
 	// Signal that WASM is ready
-	if wasmReady := js.Global().Get("wasmReady"); !wasmReady.IsUndefined() {
-		wasmReady.Invoke()
-	}
+	js.Global().Call("wasmReady")
 
 	// Keep the program running
 	select {}

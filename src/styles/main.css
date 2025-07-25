@@ -130,42 +130,6 @@ body {
   min-height: 400px;
 }
 
-/* PromQL语法高亮样式 */
-.code-pre .string {
-  color: #ffd700;
-  background-color: rgba(255, 215, 0, 0.1);
-  padding: 1px 2px;
-  border-radius: 2px;
-}
-
-.code-pre .metric {
-  color: #87ceeb;
-  font-weight: 500;
-}
-
-.code-pre .function {
-  color: #98fb98;
-  font-weight: 500;
-}
-
-.code-pre .operator {
-  color: #ffa500;
-  font-weight: bold;
-}
-
-.code-pre .number {
-  color: #ff6b6b;
-}
-
-.code-pre .label {
-  color: #dda0dd;
-}
-
-.code-pre .keyword {
-  color: #87cefa;
-  font-weight: 500;
-}
-
 /* 错误样式 */
 .error-container {
   flex: 1;

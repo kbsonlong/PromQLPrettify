@@ -38,13 +38,8 @@ class WasmFormatter {
       // 加载wasm_exec.js
       await this.loadScript(`${baseUrl}wasm_exec.js`);
       
-      // 确保Go类可用
-      if (!window.Go) {
-        throw new Error('Go WASM runtime not loaded');
-      }
-      
       // 创建Go实例
-      this.go = new window.Go();
+      this.go = new window.Go!();
       
       // 设置WASM准备就绪回调
       window.wasmReady = () => {
@@ -52,16 +47,11 @@ class WasmFormatter {
         console.log('🚀 WASM PromQL formatter is ready!');
       };
       
-      // 获取WASM文件
-      const wasmResponse = await fetch(`${baseUrl}promql-formatter.wasm`);
-      if (!wasmResponse.ok) {
-        throw new Error(`Failed to fetch WASM file: ${wasmResponse.status}`);
-      }
-      
-      const wasmBytes = await wasmResponse.arrayBuffer();
-      
-      // 实例化WASM模块
-      const result = await WebAssembly.instantiate(wasmBytes, this.go.importObject);
+      // 加载并实例化WASM模块
+      const result = await WebAssembly.instantiateStreaming(
+        fetch(`${baseUrl}promql-formatter.wasm`),
+        this.go.importObject
+      );
       
       // 运行WASM模块
       this.go.run(result.instance);
