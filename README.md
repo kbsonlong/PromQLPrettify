@@ -102,9 +102,29 @@ npm run preview
 
 ## 部署到GitHub Pages
 
+### 自动部署 (推荐)
+
+本项目已配置GitHub Actions自动部署:
+
+1. **推送代码**: 将代码推送到`main`分支
+2. **自动构建**: GitHub Actions会自动构建项目
+3. **部署到docs分支**: 构建结果会自动推送到`docs`分支
+4. **GitHub Pages设置**: 在仓库设置中将GitHub Pages源设置为`docs`分支
+
+### 手动部署
+
+如果需要手动部署:
+
 1. 构建项目: `npm run build`
-2. 将`dist`目录内容推送到`gh-pages`分支
-3. 在GitHub仓库设置中启用GitHub Pages
+2. 将`dist`目录内容推送到`docs`分支
+3. 在GitHub仓库设置中启用GitHub Pages，选择`docs`分支作为源
+
+### 部署配置说明
+
+- **GitHub Actions工作流**: `.github/workflows/deploy.yml`
+- **触发条件**: 推送到`main`分支或手动触发
+- **部署分支**: `docs`分支
+- **构建输出**: 所有静态文件直接放在`docs`分支根目录
 
 ## 致谢
 
