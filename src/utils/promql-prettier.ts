@@ -47,19 +47,11 @@ export function formatPromQL(query: string): { formatted: string; error: string 
     // 移除多余的空白字符
     const cleanQuery = query.trim().replace(/\s+/g, ' ');
     
-    // 简单的格式化逻辑
-    let formatted = cleanQuery;
-    let indentLevel = 0;
-    const indentSize = 2;
+    // 使用改进的格式化逻辑
+    let formatted = formatPromQLAdvanced(cleanQuery);
     
-    // 处理括号和缩进
-    formatted = formatBrackets(formatted);
-    
-    // 处理操作符周围的空格
-    formatted = formatOperators(formatted);
-    
-    // 处理函数调用
-    formatted = formatFunctions(formatted);
+    // 清理格式化结果
+    formatted = cleanupFormatting(formatted);
     
     return { formatted: formatted.trim(), error: null };
   } catch (error) {
@@ -71,41 +63,103 @@ export function formatPromQL(query: string): { formatted: string; error: string 
 }
 
 /**
- * 格式化括号和缩进
+ * 高级PromQL格式化函数
+ * 参考 https://github.com/laixintao/promql-metricsql-prettify 的格式化风格
  */
-function formatBrackets(query: string): string {
+function formatPromQLAdvanced(query: string): string {
   let result = '';
   let indentLevel = 0;
   const indentSize = 2;
   let i = 0;
+  let inString = false;
+  let stringChar = '';
   
   while (i < query.length) {
     const char = query[i];
+    const nextChar = i + 1 < query.length ? query[i + 1] : '';
+    const prevChar = i > 0 ? query[i - 1] : '';
     
+    // 处理字符串
+    if ((char === '"' || char === "'") && prevChar !== '\\') {
+      if (!inString) {
+        inString = true;
+        stringChar = char;
+      } else if (char === stringChar) {
+        inString = false;
+        stringChar = '';
+      }
+      result += char;
+      i++;
+      continue;
+    }
+    
+    if (inString) {
+      result += char;
+      i++;
+      continue;
+    }
+    
+    // 处理左括号
     if (char === '(') {
       result += char;
       indentLevel++;
       
-      // 检查下一个字符，如果不是空格或换行，添加换行和缩进
-      if (i + 1 < query.length && query[i + 1] !== ' ' && query[i + 1] !== '\n') {
+      // 检查是否需要换行：如果括号内容较复杂则换行
+      const contentUntilClosing = getContentUntilClosingBracket(query, i + 1);
+      if (shouldBreakAfterOpenBracket(contentUntilClosing)) {
         result += '\n' + ' '.repeat(indentLevel * indentSize);
       }
-    } else if (char === ')') {
+    }
+    // 处理右括号
+    else if (char === ')') {
       indentLevel--;
       
-      // 在右括号前添加换行和缩进
-      if (result[result.length - 1] !== '\n' && result[result.length - 1] !== ' ') {
-        result += '\n' + ' '.repeat(indentLevel * indentSize);
+      // 如果前一个字符不是空格且不在同一行，添加换行
+      if (result[result.length - 1] !== ' ' && result[result.length - 1] !== '\n') {
+        const lastNewlineIndex = result.lastIndexOf('\n');
+        const currentLineContent = lastNewlineIndex === -1 ? result : result.substring(lastNewlineIndex + 1);
+        if (currentLineContent.trim().length > 0 && shouldBreakBeforeCloseBracket(currentLineContent)) {
+          result += '\n' + ' '.repeat(indentLevel * indentSize);
+        }
       }
-      result += char;
-    } else if (char === ',') {
       result += char;
       
-      // 在逗号后添加换行和缩进
-      if (i + 1 < query.length && query[i + 1] !== ' ' && query[i + 1] !== '\n') {
+      // 处理 by 和 without 子句
+       const remainingQuery = query.substring(i + 1);
+       const byWithoutMatch = remainingQuery.match(/^\s*(by|without)\s*\(/);
+       if (byWithoutMatch) {
+         result += '\n) ' + byWithoutMatch[1] + '(';
+         i += byWithoutMatch[0].length;
+         indentLevel++;
+         continue;
+       }
+    }
+    // 处理逗号
+    else if (char === ',') {
+      result += char;
+      
+      // 在逗号后添加换行和缩进（仅在函数参数列表中）
+      if (indentLevel > 0) {
         result += '\n' + ' '.repeat(indentLevel * indentSize);
+      } else {
+        result += ' ';
       }
-    } else {
+    }
+    // 处理比较操作符
+     else if (isComparisonOperator(query, i)) {
+       const op = getComparisonOperator(query, i);
+       // 在操作符前后添加适当的空格和换行
+       if (result[result.length - 1] !== ' ' && result[result.length - 1] !== '\n') {
+         result += '\n';
+       }
+       result += ' '.repeat(indentLevel * indentSize) + op;
+       if (i + op.length < query.length) {
+         result += '\n' + ' '.repeat(indentLevel * indentSize);
+       }
+       i += op.length - 1;
+     }
+    // 处理其他字符
+    else {
       result += char;
     }
     
@@ -116,39 +170,79 @@ function formatBrackets(query: string): string {
 }
 
 /**
- * 格式化操作符周围的空格
+ * 获取括号内的内容
  */
-function formatOperators(query: string): string {
-  let result = query;
+function getContentUntilClosingBracket(query: string, startIndex: number): string {
+  let depth = 1;
+  let i = startIndex;
+  let content = '';
   
-  // 为比较操作符添加空格
-  const comparisonOps = ['==', '!=', '>=', '<=', '>', '<'];
-  comparisonOps.forEach(op => {
-    const regex = new RegExp(`\\s*${escapeRegex(op)}\\s*`, 'g');
-    result = result.replace(regex, `\n  ${op}\n`);
-  });
+  while (i < query.length && depth > 0) {
+    const char = query[i];
+    if (char === '(') depth++;
+    else if (char === ')') depth--;
+    
+    if (depth > 0) content += char;
+    i++;
+  }
   
-  // 为逻辑操作符添加空格
-  const logicalOps = ['and', 'or', 'unless'];
-  logicalOps.forEach(op => {
-    const regex = new RegExp(`\\s+${op}\\s+`, 'gi');
-    result = result.replace(regex, ` ${op} `);
-  });
-  
-  return result;
+  return content;
 }
 
 /**
- * 格式化函数调用
+ * 判断是否应该在左括号后换行
  */
-function formatFunctions(query: string): string {
-  let result = query;
-  
-  // 处理聚合函数的 by 子句
-  result = result.replace(/\)\s*by\s*\(/g, '\n) by(');
-  result = result.replace(/\)\s*without\s*\(/g, '\n) without(');
-  
-  return result;
+function shouldBreakAfterOpenBracket(content: string): boolean {
+  // 如果内容包含逗号、复杂函数调用或长度超过阈值，则换行
+  return content.includes(',') || 
+         content.length > 30 || 
+         /\w+\s*\(/.test(content) ||
+         /[><=!]=?/.test(content);
+}
+
+/**
+ * 判断是否应该在右括号前换行
+ */
+function shouldBreakBeforeCloseBracket(currentLineContent: string): boolean {
+  // 如果当前行内容较长或包含复杂表达式，则在右括号前换行
+  return currentLineContent.trim().length > 40 || 
+         currentLineContent.includes(',');
+}
+
+/**
+ * 检查是否是比较操作符
+ */
+function isComparisonOperator(query: string, index: number): boolean {
+  const comparisonOps = ['==', '!=', '>=', '<=', '>', '<'];
+  return comparisonOps.some(op => query.substring(index, index + op.length) === op);
+}
+
+/**
+ * 获取比较操作符
+ */
+function getComparisonOperator(query: string, index: number): string {
+  const comparisonOps = ['==', '!=', '>=', '<=', '>', '<'];
+  for (const op of comparisonOps) {
+    if (query.substring(index, index + op.length) === op) {
+      return op;
+    }
+  }
+  return '';
+}
+
+/**
+ * 清理多余的空行和空格
+ */
+function cleanupFormatting(query: string): string {
+  return query
+    .replace(/\n\s*\n\s*\n/g, '\n\n') // 移除多余的空行
+    .replace(/\n\s*\n/g, '\n') // 移除双空行
+    .replace(/\s+$/gm, '') // 移除行尾空格
+    .replace(/^\s+/gm, (match) => {
+      // 保持缩进，但移除多余空格
+      const spaces = match.length;
+      return ' '.repeat(Math.floor(spaces / 2) * 2);
+    });
 }
 
 /**
