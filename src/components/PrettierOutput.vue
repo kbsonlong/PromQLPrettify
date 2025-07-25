@@ -13,7 +13,11 @@
     <div class="output-container">
       <!-- 正常输出 -->
       <div v-if="!hasError && formattedContent" class="success-output">
-        <pre class="code-pre">{{ formattedContent }}</pre>
+        <highlightjs 
+          language="promql"
+          :code="formattedContent"
+          class="code-highlight"
+        />
       </div>
       
       <!-- 错误输出 -->
@@ -79,6 +83,8 @@ const props = withDefaults(defineProps<Props>(), {
   formatTime: undefined
 })
 
+
+
 // 计算属性
 const hasError = computed(() => {
   return !!props.error
@@ -87,6 +93,8 @@ const hasError = computed(() => {
 const formattedContent = computed(() => {
   return hasError.value ? '' : props.content
 })
+
+
 
 const errorMessage = computed(() => {
   return props.error || ''
@@ -147,35 +155,33 @@ const charCount = computed(() => {
   flex-direction: column;
 }
 
-.code-pre {
+.code-highlight {
   flex: 1;
-  padding: 16px;
-  background: #1e1e1e;
-  color: #d4d4d4;
   font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
   font-size: 14px;
   line-height: 1.5;
   overflow: auto;
-  white-space: pre;
   margin: 0;
+  border-radius: 0;
+}
+
+.code-highlight :deep(pre) {
+  margin: 0;
+  padding: 16px;
+  overflow: auto;
+  white-space: pre;
   tab-size: 2;
 }
 
-/* 语法高亮样式 */
-.code-pre {
-  /* PromQL关键字 */
-  --keyword-color: #569cd6;
-  /* 函数名 */
-  --function-color: #dcdcaa;
-  /* 字符串 */
-  --string-color: #ce9178;
-  /* 数字 */
-  --number-color: #b5cea8;
-  /* 操作符 */
-  --operator-color: #d4d4d4;
-  /* 注释 */
-  --comment-color: #6a9955;
+.code-highlight :deep(code) {
+  background: transparent;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
 }
+
+/* 基础代码样式，颜色由主题控制 */
 
 /* 错误容器 */
 .error-container {
@@ -332,7 +338,7 @@ const charCount = computed(() => {
     min-height: 250px;
   }
   
-  .code-pre {
+  .code-highlight :deep(pre) {
     font-size: 13px;
     padding: 12px;
   }
@@ -364,7 +370,7 @@ const charCount = computed(() => {
 }
 
 @media (max-width: 480px) {
-  .code-pre {
+  .code-highlight :deep(pre) {
     font-size: 12px;
     padding: 10px;
   }
@@ -383,21 +389,21 @@ const charCount = computed(() => {
 }
 
 /* 滚动条样式 */
-.code-pre::-webkit-scrollbar {
+.code-highlight :deep(pre)::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-.code-pre::-webkit-scrollbar-track {
+.code-highlight :deep(pre)::-webkit-scrollbar-track {
   background: #2d2d2d;
 }
 
-.code-pre::-webkit-scrollbar-thumb {
+.code-highlight :deep(pre)::-webkit-scrollbar-thumb {
   background: #555;
   border-radius: 4px;
 }
 
-.code-pre::-webkit-scrollbar-thumb:hover {
+.code-highlight :deep(pre)::-webkit-scrollbar-thumb:hover {
   background: #777;
 }
 </style>

@@ -6,6 +6,11 @@
       <p>让您的PromQL和MetricsQL查询更加美观易读</p>
     </header>
     
+    <!-- 主题选择器 -->
+    <div class="theme-selector-container">
+      <ThemeSelector />
+    </div>
+    
     <!-- 主要内容区域 -->
     <main class="interactive-area">
       <!-- 输入区域 -->
@@ -29,9 +34,8 @@
     <!-- 页脚 -->
     <footer class="footer">
       <p>
-        基于Vue.js开发 | 
-        <a href="https://github.com/laixintao/promql-metricsql-prettify" target="_blank" rel="noopener">
-          参考项目
+        <a href="https://github.com/kbsonlong/PromQLPrettify" target="_blank" rel="noopener">
+          GitHub
         </a> | 
         <a href="https://prometheus.io/docs/prometheus/latest/querying/basics/" target="_blank" rel="noopener">
           PromQL文档
@@ -48,6 +52,7 @@
 import { ref, watch } from 'vue'
 import PromqlEditor from './components/PromqlEditor.vue'
 import PrettierOutput from './components/PrettierOutput.vue'
+import ThemeSelector from './components/ThemeSelector.vue'
 import { formatPromQL, validatePromQL, FormatMode } from './utils/promql-prettier'
 
 // 应用状态
@@ -176,6 +181,11 @@ window.addEventListener('unhandledrejection', (event) => {
   font-size: 16px;
   opacity: 0.9;
   font-weight: 400;
+}
+
+.theme-selector-container {
+  padding: 0 20px;
+  margin-bottom: 10px;
 }
 
 .interactive-area {

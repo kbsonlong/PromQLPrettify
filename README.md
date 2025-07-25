@@ -1,6 +1,6 @@
 # PromQL Prettify - Vue.js版本
 
-一个基于Vue.js开发的PromQL和MetricsQL在线美化工具，可以将复杂的查询语句格式化为易读的形式。
+一个PromQL和MetricsQL在线美化工具，可以将复杂的查询语句格式化为易读的形式。
 
 ## 功能特性
 
@@ -9,9 +9,7 @@
 - 🎨 **实时预览**: 输入即时显示格式化结果
 - 📋 **一键复制**: 快速复制格式化后的查询语句
 - 📱 **响应式设计**: 支持桌面和移动设备
-- 🌙 **深色主题**: 提供舒适的代码阅读体验
-- ⚡ **零依赖**: 纯前端实现，无需后端服务
-- 🚀 **智能格式化**: 参考[promql-metricsql-prettify](https://github.com/laixintao/promql-metricsql-prettify)的格式化风格，减少不必要的换行，提供更美观的输出
+- 🌙 **多种主题**: 提供舒适的代码阅读体验
 - 🔧 **WASM模式**: 集成VictoriaMetrics/metricsql的Go WASM模块，提供更精确的格式化和验证
 
 ## 技术栈
