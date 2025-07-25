@@ -30,9 +30,9 @@
   ],
   "author": "Your Name",
   "license": "MIT",
-  "homepage": "https://yourusername.github.io/promql-prettify",
+  "homepage": "https://kbsonlong.github.io/PromQLPrettify",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/promql-prettify.git"
+    "url": "https://github.com/kbsonlong/PromQLPrettify.git"
   }
 }

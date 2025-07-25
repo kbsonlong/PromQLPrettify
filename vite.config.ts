@@ -4,7 +4,7 @@ import vue from '@vitejs/plugin-vue'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [vue()],
-  base: '/promql-prettify/', // GitHub Pages 部署路径
+  base: '/PromQLPrettify/', // GitHub Pages 部署路径
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
